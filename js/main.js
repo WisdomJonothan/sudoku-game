@@ -35,6 +35,8 @@
     );
 
     StorageManager.saveGame(window._sudokuGameState);
+    const presetEl = document.getElementById('preset-select');
+    if (presetEl) presetEl.value = '';
     UIController.setGameState(window._sudokuGameState);
   }
 

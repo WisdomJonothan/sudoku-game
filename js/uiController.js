@@ -18,7 +18,18 @@ const UIController = (() => {
   function sGs(v) { window._sudokuGameState = v; }
 
   function ensureInit() {
-    if (!_initialized) { cacheDOM(); attachListeners(); _initialized = true; }
+    if (!_initialized) { cacheDOM(); populatePresets(); attachListeners(); _initialized = true; }
+  }
+
+  function populatePresets() {
+    const presets = PresetPuzzles.getAll();
+    presets.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.icon + ' ' + p.name;
+      opt.title = p.description;
+      els.presetSelect.appendChild(opt);
+    });
   }
 
   function getBoxRC(size) {
@@ -86,9 +97,10 @@ const UIController = (() => {
     els.modalInput      = document.getElementById('modal-input');
     els.modalConfirm    = document.getElementById('modal-confirm');
     els.modalCancel     = document.getElementById('modal-cancel');
-    els.sizeSelect      = document.getElementById('size-select');
-    els.difficultySelect = document.getElementById('difficulty-select');
-    els.notification    = document.getElementById('notification');
+    els.sizeSelect        = document.getElementById('size-select');
+    els.difficultySelect  = document.getElementById('difficulty-select');
+    els.presetSelect      = document.getElementById('preset-select');
+    els.notification      = document.getElementById('notification');
   }
 
   function attachListeners() {
@@ -99,6 +111,39 @@ const UIController = (() => {
       if (typeof window.startNewGame === 'function') {
         window.startNewGame();
       }
+    });
+
+    // Preset puzzle selector
+    els.presetSelect.addEventListener('change', () => {
+      const id = els.presetSelect.value;
+      if (!id) return;
+      const preset = PresetPuzzles.getById(id);
+      if (!preset) return;
+
+      showNotification('正在生成题目...');
+      setTimeout(() => {
+        const data = preset.load();
+        if (!data) {
+          showNotification('生成失败，请重试');
+          els.presetSelect.value = '';
+          return;
+        }
+        sGs(new GameState(
+          data.size, data.boxRows, data.boxCols,
+          data.difficulty, data.puzzle, data.solution
+        ));
+        gs().isChallenge = true;
+        // Sync selectors
+        els.sizeSelect.value = String(data.size);
+        els.difficultySelect.value = data.difficulty;
+        selectedRow = -1; selectedCol = -1;
+        notesMode = false;
+        updateNotesToggle();
+        startTimer();
+        saveAndRender();
+        showNotification('已加载: ' + preset.name);
+        els.presetSelect.value = '';
+      }, 50);
     });
 
     els.undoBtn.addEventListener('click', () => {
