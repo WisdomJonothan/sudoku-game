@@ -24,6 +24,33 @@
    * Stores gameState on window._sudokuGameState so all modules share the reference.
    */
   function startNewGame() {
+    // If a preset mode is active, reload the same preset type
+    const presetId = window._currentPresetId;
+    if (presetId) {
+      const preset = PresetPuzzles.getById(presetId);
+      if (preset) {
+        const data = preset.load();
+        if (data) {
+          window._sudokuGameState = new GameState(
+            data.size, data.boxRows, data.boxCols,
+            data.difficulty, data.puzzle, data.solution
+          );
+          window._sudokuGameState.isChallenge = true;
+          StorageManager.saveGame(window._sudokuGameState);
+          const presetEl = document.getElementById('preset-select');
+          if (presetEl) presetEl.value = '';
+          UIController.setGameState(window._sudokuGameState);
+          UIController.showNotification('已换新题: ' + preset.name);
+          return;
+        }
+      }
+    }
+
+    // Standard random generation
+    window._currentPresetId = null;
+    const indicator = document.getElementById('preset-indicator');
+    if (indicator) indicator.style.display = 'none';
+
     const size = parseInt(document.getElementById('size-select').value, 10);
     const difficulty = document.getElementById('difficulty-select').value;
     const boxRC = getBoxRC(size);

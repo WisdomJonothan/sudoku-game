@@ -123,16 +123,23 @@ const UIController = (() => {
       showNotification('正在生成题目...');
       setTimeout(() => {
         const data = preset.load();
-        if (!data) {
+        if (!data || !validatePuzzle(data)) {
           showNotification('生成失败，请重试');
           els.presetSelect.value = '';
           return;
         }
-        sGs(new GameState(
+
+        const newGs = new GameState(
           data.size, data.boxRows, data.boxCols,
           data.difficulty, data.puzzle, data.solution
-        ));
-        gs().isChallenge = true;
+        );
+        newGs.isChallenge = true;
+        sGs(newGs);
+
+        // Remember this preset so "新游戏" regenerates the same type
+        window._currentPresetId = id;
+        updatePresetIndicator();
+
         // Sync selectors
         els.sizeSelect.value = String(data.size);
         els.difficultySelect.value = data.difficulty;
@@ -141,9 +148,19 @@ const UIController = (() => {
         updateNotesToggle();
         startTimer();
         saveAndRender();
-        showNotification('已加载: ' + preset.name);
+        showNotification('已加载: ' + preset.name + '  (再次点新游戏可换题)');
         els.presetSelect.value = '';
       }, 50);
+    });
+
+    // Clear preset mode when user manually changes size or difficulty
+    els.sizeSelect.addEventListener('change', () => {
+      window._currentPresetId = null;
+      updatePresetIndicator();
+    });
+    els.difficultySelect.addEventListener('change', () => {
+      window._currentPresetId = null;
+      updatePresetIndicator();
     });
 
     els.undoBtn.addEventListener('click', () => {
@@ -387,6 +404,35 @@ const UIController = (() => {
       return 10 + key.toUpperCase().charCodeAt(0) - 65;
     }
     return 0;
+  }
+
+  // ---- Preset helpers ----
+
+  /** Validate that a loaded preset puzzle has a complete solution. */
+  function validatePuzzle(data) {
+    if (!data || !data.puzzle || !data.solution) return false;
+    const s = data.size;
+    // Check solution has no zeros and is a valid completed board
+    for (let r = 0; r < s; r++) {
+      for (let c = 0; c < s; c++) {
+        if (data.solution[r][c] === 0 || data.solution[r][c] === null) return false;
+      }
+    }
+    return SudokuSolver.isBoardValid(data.solution, s, data.boxRows, data.boxCols);
+  }
+
+  /** Update the visual indicator for active preset mode. */
+  function updatePresetIndicator() {
+    const id = window._currentPresetId;
+    const indicator = document.getElementById('preset-indicator');
+    if (!indicator) return;
+    if (id) {
+      const preset = PresetPuzzles.getById(id);
+      indicator.textContent = '模式: ' + (preset ? preset.name : id);
+      indicator.style.display = 'inline-block';
+    } else {
+      indicator.style.display = 'none';
+    }
   }
 
   // ---- Rendering ----
