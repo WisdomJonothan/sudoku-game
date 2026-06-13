@@ -11,10 +11,15 @@ const UIController = (() => {
   let els = {};
   let modalCallback = null;
   let notificationTimeout = null;
+  let _initialized = false;
 
   // Shorthand accessors for the shared game state
   function gs()  { return window._sudokuGameState; }
   function sGs(v) { window._sudokuGameState = v; }
+
+  function ensureInit() {
+    if (!_initialized) { cacheDOM(); attachListeners(); _initialized = true; }
+  }
 
   function getBoxRC(size) {
     const map = {
@@ -29,14 +34,14 @@ const UIController = (() => {
   /** Initialize UI, cache DOM elements, attach event listeners. */
   function init(state) {
     sGs(state);
-    cacheDOM();
-    attachListeners();
+    ensureInit();
     render();
   }
 
   /** Update game state reference (e.g. after loading a save / new game). */
   function setGameState(state) {
     sGs(state);
+    ensureInit();
     selectedRow = -1;
     selectedCol = -1;
     notesMode = false;
@@ -140,10 +145,8 @@ const UIController = (() => {
           }
         }
         gs().usedHint = true;
-        gs().completed = true;
-        gs().completedAt = new Date().toISOString();
         saveAndRender();
-        showResult();
+        showNotification('已显示完整答案');
       }
     });
 
