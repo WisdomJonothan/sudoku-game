@@ -29,7 +29,11 @@
     if (presetId) {
       const preset = PresetPuzzles.getById(presetId);
       if (preset) {
-        const data = preset.load();
+        let data;
+        try { data = preset.load(); } catch (e) {
+          console.error('Preset reload error:', presetId, e);
+          data = null;
+        }
         if (data) {
           window._sudokuGameState = new GameState(
             data.size, data.boxRows, data.boxCols,
@@ -43,6 +47,8 @@
           UIController.showNotification('已换新题: ' + preset.name);
           return;
         }
+        // Preset load failed — fall through to standard generation
+        UIController.showNotification('预设生成失败，切换为标准模式');
       }
     }
 

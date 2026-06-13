@@ -122,9 +122,18 @@ const UIController = (() => {
 
       showNotification('正在生成题目...');
       setTimeout(() => {
-        const data = preset.load();
+        let data;
+        try {
+          data = preset.load();
+        } catch (e) {
+          console.error('Preset load error:', preset.id, e);
+          showNotification('生成出错: ' + e.message);
+          els.presetSelect.value = '';
+          return;
+        }
         if (!data || !validatePuzzle(data)) {
-          showNotification('生成失败，请重试');
+          showNotification('生成失败: 未能生成有效题目，请重试');
+          console.error('Preset validation failed:', preset.id, data);
           els.presetSelect.value = '';
           return;
         }

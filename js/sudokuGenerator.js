@@ -34,9 +34,13 @@ const SudokuGenerator = (() => {
   function generateFullBoard(size, boxRows, boxCols) {
     const board = SudokuSolver.createEmptyBoard(size);
 
-    // Fill diagonal boxes with random valid values
-    const boxCount = size / boxRows; // number of boxes along one dimension
-    for (let bi = 0; bi < boxCount; bi++) {
+    // Fill diagonal boxes with random valid values.
+    // These boxes don't share rows or columns, so any permutation is valid.
+    // Works for both square (4×4,9×9,16×16) and rectangular (6×6 with 2×3) boxes.
+    const boxRowsCount = size / boxRows;
+    const boxColsCount = size / boxCols;
+    const diagCount = Math.min(boxRowsCount, boxColsCount);
+    for (let bi = 0; bi < diagCount; bi++) {
       const startRow = bi * boxRows;
       const startCol = bi * boxCols;
       const values = shuffle(Array.from({ length: size }, (_, i) => i + 1));

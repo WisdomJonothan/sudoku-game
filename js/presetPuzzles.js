@@ -6,102 +6,50 @@
 
 const PresetPuzzles = (() => {
 
-  // ---- Famous 9x9 puzzles (hardcoded grids, solution computed at load time) ----
+  // ---- Utility ----
 
-  /**
-   * Arto Inkala's "World's Hardest Sudoku" (2012)
-   * 23 clues, famously required backtracking + advanced techniques.
-   */
-  const INKALA_2012 = {
-    name: 'The Inkala',
-    description: 'Arto Inkala 2012 — 号称"世界最难"，23个线索',
-    size: 9, boxRows: 3, boxCols: 3, difficulty: 'hard',
-    puzzle: [
-      [8,0,0,0,0,0,0,0,0],
-      [0,0,3,6,0,0,0,0,0],
-      [0,7,0,0,9,0,2,0,0],
-      [0,5,0,0,0,7,0,0,0],
-      [0,0,0,0,4,5,7,0,0],
-      [0,0,0,1,0,0,0,3,0],
-      [0,0,1,0,0,0,0,6,8],
-      [0,0,8,5,0,0,0,1,0],
-      [0,9,0,0,0,0,4,0,0]
-    ]
-  };
+  /** Load a hardcoded puzzle: solve it, verify unique solution. */
+  function loadFixed(puzzleGrid, size, boxRows, boxCols) {
+    const puzzle = SudokuSolver.cloneBoard(puzzleGrid);
+    const solution = SudokuSolver.cloneBoard(puzzleGrid);
+    const solved = SudokuSolver.solve(solution, size, boxRows, boxCols);
+    if (!solved) throw new Error('Solver failed');
 
-  /**
-   * "AI Escargot" (Arto Inkala, 2006) — precursor to the 2012 puzzle.
-   */
-  const AI_ESCARGOT = {
-    name: 'AI Escargot',
-    description: 'Arto Inkala 2006 — 曾被AI判定为"最难"',
-    size: 9, boxRows: 3, boxCols: 3, difficulty: 'hard',
-    puzzle: [
-      [1,0,0,0,0,7,0,9,0],
-      [0,3,0,0,2,0,0,0,8],
-      [0,0,9,6,0,0,5,0,0],
-      [0,0,5,3,0,0,9,0,0],
-      [0,1,0,0,8,0,0,0,2],
-      [6,0,0,0,0,4,0,0,0],
-      [3,0,0,0,0,0,0,1,0],
-      [0,4,0,0,0,0,0,0,7],
-      [0,0,7,0,0,0,3,0,0]
-    ]
-  };
+    // Verify solution integrity (defensive)
+    for (let r = 0; r < size; r++)
+      for (let c = 0; c < size; c++)
+        if (solution[r][c] === 0) throw new Error('Solution incomplete');
 
-  /**
-   * "Platinum Blonde" — famously hard, ~28 clues.
-   */
-  const PLATINUM_BLONDE = {
-    name: 'Platinum Blonde',
-    description: '又名"金发美女"，以极少的初期可推导步骤著称',
-    size: 9, boxRows: 3, boxCols: 3, difficulty: 'hard',
-    puzzle: [
-      [0,0,0,0,0,0,0,1,2],
-      [0,0,0,0,3,5,0,0,0],
-      [0,0,0,6,0,0,0,7,0],
-      [7,0,0,0,0,0,3,0,0],
-      [0,0,0,4,0,0,8,0,0],
-      [1,0,0,0,0,0,0,0,0],
-      [0,0,0,1,2,0,0,0,0],
-      [0,8,0,0,0,0,0,4,0],
-      [0,5,0,0,0,0,6,0,0]
-    ]
-  };
+    return { puzzle, solution, size, boxRows, boxCols, difficulty: 'hard' };
+  }
 
-  /**
-   * "The Easter Monster" — extremely hard, requires forcing chains.
-   */
-  const EASTER_MONSTER = {
-    name: 'Easter Monster',
-    description: '复活节怪物 — 需要强力链式推导才能破解',
-    size: 9, boxRows: 3, boxCols: 3, difficulty: 'hard',
-    puzzle: [
-      [1,0,0,0,0,0,0,0,0],
-      [0,2,0,0,0,0,0,0,0],
-      [0,0,3,0,0,0,0,0,0],
-      [0,0,0,4,0,0,0,0,0],
-      [0,0,0,0,5,0,0,0,0],
-      [0,0,0,0,0,6,0,0,0],
-      [0,0,0,0,0,0,7,0,0],
-      [0,0,0,0,0,0,0,8,0],
-      [0,0,0,0,0,0,0,0,9]
-    ]
-  };
+  // ---- Famous 9x9 puzzles ----
+
+  /** Arto Inkala's "World's Hardest Sudoku" (2012), 23 clues. */
+  const INKALA_2012 = [
+    [8,0,0,0,0,0,0,0,0],
+    [0,0,3,6,0,0,0,0,0],
+    [0,7,0,0,9,0,2,0,0],
+    [0,5,0,0,0,7,0,0,0],
+    [0,0,0,0,4,5,7,0,0],
+    [0,0,0,1,0,0,0,3,0],
+    [0,0,1,0,0,0,0,6,8],
+    [0,0,8,5,0,0,0,1,0],
+    [0,9,0,0,0,0,4,0,0]
+  ];
 
   // ---- Pattern-based presets (generated) ----
 
   /**
    * Generate a puzzle whose given cells follow a visual pattern mask.
-   * mask(r,c): return true to keep this cell as a given.
+   * mask(r,c,size): return true to keep this cell as a given.
    */
   function generatePatternPreset(size, boxRows, boxCols, maskFn, minClues, maxAttempts) {
-    maxAttempts = maxAttempts || 50;
+    maxAttempts = maxAttempts || 80;
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const solution = SudokuGenerator.generateFullBoard(size, boxRows, boxCols);
       const puzzle = SudokuSolver.createEmptyBoard(size);
 
-      // Keep only cells matching the mask
       let clueCount = 0;
       for (let r = 0; r < size; r++) {
         for (let c = 0; c < size; c++) {
@@ -121,68 +69,32 @@ const PresetPuzzles = (() => {
     return null;
   }
 
-  // ---- Preset Definitions ----
+  /** Safe random puzzle generation with retries. */
+  function safeGenerate(size, boxRows, boxCols, difficulty, maxAttempts) {
+    maxAttempts = maxAttempts || 10;
+    for (let i = 0; i < maxAttempts; i++) {
+      try {
+        const gen = SudokuGenerator.generatePuzzle(size, boxRows, boxCols, difficulty);
+        if (gen && gen.puzzle && gen.solution) return gen;
+      } catch (e) { /* retry */ }
+    }
+    return null;
+  }
+
+  // ---- Preset List ----
 
   const presets = [
-    // Famous puzzles
     {
       id: 'inkala',
       name: 'The Inkala',
       description: 'Arto Inkala 2012 — "世界最难"数独，23个线索',
       icon: '⭐',
-      load() {
-        const s = INKALA_2012;
-        const puzzle = SudokuSolver.cloneBoard(s.puzzle);
-        const solution = SudokuSolver.cloneBoard(s.puzzle);
-        SudokuSolver.solve(solution, s.size, s.boxRows, s.boxCols);
-        return { puzzle, solution, size: s.size, boxRows: s.boxRows, boxCols: s.boxCols, difficulty: 'hard' };
-      }
+      load() { return loadFixed(INKALA_2012, 9, 3, 3); }
     },
-    {
-      id: 'escargot',
-      name: 'AI Escargot',
-      description: 'Arto Inkala 2006 — AI判定为最难解的前代名作',
-      icon: '🐌',
-      load() {
-        const s = AI_ESCARGOT;
-        const puzzle = SudokuSolver.cloneBoard(s.puzzle);
-        const solution = SudokuSolver.cloneBoard(s.puzzle);
-        SudokuSolver.solve(solution, s.size, s.boxRows, s.boxCols);
-        return { puzzle, solution, size: s.size, boxRows: s.boxRows, boxCols: s.boxCols, difficulty: 'hard' };
-      }
-    },
-    {
-      id: 'platinum',
-      name: 'Platinum Blonde',
-      description: '28线索 — 开局几乎无法直接推导，极度依赖高级技巧',
-      icon: '💎',
-      load() {
-        const s = PLATINUM_BLONDE;
-        const puzzle = SudokuSolver.cloneBoard(s.puzzle);
-        const solution = SudokuSolver.cloneBoard(s.puzzle);
-        SudokuSolver.solve(solution, s.size, s.boxRows, s.boxCols);
-        return { puzzle, solution, size: s.size, boxRows: s.boxRows, boxCols: s.boxCols, difficulty: 'hard' };
-      }
-    },
-    {
-      id: 'easter_monster',
-      name: 'Easter Monster',
-      description: '只有对角线有线索 — 看似简单实则极难',
-      icon: '🐣',
-      load() {
-        const s = EASTER_MONSTER;
-        const puzzle = SudokuSolver.cloneBoard(s.puzzle);
-        const solution = SudokuSolver.cloneBoard(s.puzzle);
-        SudokuSolver.solve(solution, s.size, s.boxRows, s.boxCols);
-        return { puzzle, solution, size: s.size, boxRows: s.boxRows, boxCols: s.boxCols, difficulty: 'hard' };
-      }
-    },
-
-    // Pattern-generated puzzles (new board each time)
     {
       id: 'diagonal',
       name: '对角线',
-      description: '给定格沿对角线分布，形成X形视觉',
+      description: '给定格沿对角线分布，形成X形视觉（每次随机生成）',
       icon: '✕',
       load() {
         return generatePatternPreset(9, 3, 3, (r, c, s) => {
@@ -193,7 +105,7 @@ const PresetPuzzles = (() => {
     {
       id: 'diamond',
       name: '菱形',
-      description: '线索集中在中央菱形区域',
+      description: '线索集中在中央菱形区域（每次随机生成）',
       icon: '◇',
       load() {
         return generatePatternPreset(9, 3, 3, (r, c, s) => {
@@ -205,7 +117,7 @@ const PresetPuzzles = (() => {
     {
       id: 'frame',
       name: '框架',
-      description: '线索在四个边框，中心几乎空白',
+      description: '线索在四个边框，中心几乎空白（每次随机生成）',
       icon: '▣',
       load() {
         return generatePatternPreset(9, 3, 3, (r, c, s) => {
@@ -217,7 +129,7 @@ const PresetPuzzles = (() => {
     {
       id: 'four_boxes',
       name: '四角宫格',
-      description: '只有四个角的3×3宫格有线索',
+      description: '只有四个角的3×3宫格有线索（每次随机生成）',
       icon: '⊞',
       load() {
         return generatePatternPreset(9, 3, 3, (r, c, s) => {
@@ -232,12 +144,10 @@ const PresetPuzzles = (() => {
     {
       id: 'checker',
       name: '棋盘格',
-      description: '线索像棋盘一样交错分布',
+      description: '线索像棋盘一样交错分布（每次随机生成）',
       icon: '▦',
       load() {
-        return generatePatternPreset(9, 3, 3, (r, c) => {
-          return (r + c) % 2 === 0;
-        }, 30);
+        return generatePatternPreset(9, 3, 3, (r, c) => (r + c) % 2 === 0, 30);
       }
     },
     {
@@ -245,27 +155,19 @@ const PresetPuzzles = (() => {
       name: '迷你挑战',
       description: '4×4 棋盘 — 新手也能享受的迷你数独',
       icon: '🔹',
-      load() {
-        const gen = SudokuGenerator.generatePuzzle(4, 2, 2, 'easy');
-        return gen;
-      }
+      load() { return safeGenerate(4, 2, 2, 'easy'); }
     },
     {
       id: 'six_by_six',
       name: '进阶挑战',
       description: '6×6 棋盘 — 适合有一定经验的玩家',
       icon: '🔶',
-      load() {
-        const gen = SudokuGenerator.generatePuzzle(6, 2, 3, 'medium');
-        return gen;
-      }
+      load() { return safeGenerate(6, 2, 3, 'medium'); }
     }
   ];
 
-  /** Get all preset definitions. */
   function getAll() { return presets; }
 
-  /** Find a preset by id. */
   function getById(id) {
     return presets.find(p => p.id === id) || null;
   }
